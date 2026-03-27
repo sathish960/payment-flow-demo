@@ -14,11 +14,27 @@ async function processPayments() {
     `);
 
     const jobs = result.rows;
-
     console.log("Jobs found:", jobs.length);
 
     for (const job of jobs) {
       console.log(`Processing charge_job_id=${job.charge_job_id}, invoice_id=${job.invoice_id}`);
+
+      // Skip jobs with amount > 800
+      if (job.amount > 800) {
+        await db.query(
+          `
+          UPDATE payment_charge_job
+          SET job_status = 'RETRY_PENDING',
+              retry_count = retry_count + 1,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE charge_job_id = $1
+          `,
+          [job.charge_job_id]
+        );
+
+        console.log(`Skipped invoice_id=${job.invoice_id} because amount > 800`);
+        continue;
+      }
 
       const payload = {
         invoiceId: job.invoice_id,
@@ -26,7 +42,6 @@ async function processPayments() {
       };
 
       let apiResponse;
-
       try {
         const response = await axios.post(process.env.API_URL, payload);
         apiResponse = response.data;

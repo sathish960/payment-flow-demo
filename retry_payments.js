@@ -4,6 +4,8 @@ const db = require("./db");
 
 async function retryPayments() {
   try {
+    console.log("ENV PASSWORD:", process.env.DB_PASSWORD);
+    console.log("API URL:", process.env.API_URL);
     console.log("Starting retry processing...");
 
     const result = await db.query(`
@@ -21,9 +23,11 @@ async function retryPayments() {
       console.log(`Retrying charge_job_id=${job.charge_job_id}, invoice_id=${job.invoice_id}`);
 
       const payload = {
-        invoiceId: 1, 
+        invoiceId: job.invoice_id,
         amount: job.amount
       };
+
+      console.log("Payload being sent:", payload);
 
       let apiResponse;
 
@@ -42,16 +46,8 @@ async function retryPayments() {
       if (apiResponse.status === "SUCCESS") {
         await db.query(
           `
-          INSERT INTO payment_transaction (invoice_id, payment_type, amount, txn_status, txn_reference)
-          VALUES ($1, 'CARD', $2, 'SUCCESS', $3)
-          `,
-          [job.invoice_id, job.amount, apiResponse.txnReference]
-        );
-
-        await db.query(
-          `
           UPDATE payment_charge_job
-          SET job_status = 'PROCESSED',
+          SET job_status = 'SUCCESS',
               updated_at = CURRENT_TIMESTAMP
           WHERE charge_job_id = $1
           `,
@@ -60,35 +56,37 @@ async function retryPayments() {
 
         await db.query(
           `
-          UPDATE invoice
-          SET is_fully_paid = 'Y',
-              status = 'PAID'
-          WHERE invoice_id = $1
+          INSERT INTO payment_transaction (invoice_id,payment_type ,amount, txn_status, txn_reference)
+          VALUES ($1,'card', $2, $3, $4)
           `,
-          [job.invoice_id]
+          [job.invoice_id, job.amount, "SUCCESS", apiResponse.txnReference]
         );
 
         console.log(`Retry success for invoice_id=${job.invoice_id}`);
       } else {
+        const newRetryCount = job.retry_count + 1;
+        const newStatus = newRetryCount >= 3 ? "PERMANENT_FAILED" : "RETRY_PENDING";
+
         await db.query(
           `
           UPDATE payment_charge_job
-          SET retry_count = retry_count + 1,
+          SET job_status = $1,
+              retry_count = $2,
               updated_at = CURRENT_TIMESTAMP
-          WHERE charge_job_id = $1
+          WHERE charge_job_id = $3
           `,
-          [job.charge_job_id]
+          [newStatus, newRetryCount, job.charge_job_id]
         );
 
-        console.log(`Retry failed again for invoice_id=${job.invoice_id}`);
+        console.log(
+          `Retry failed for invoice_id=${job.invoice_id}, retry_count=${newRetryCount}, status=${newStatus}`
+        );
       }
     }
 
     console.log("Retry processing completed.");
-  } catch (err) {
-    console.error("Retry process error:", err);
-  } finally {
-    process.exit();
+  } catch (error) {
+    console.error("Error in retryPayments():", error.message);
   }
 }
 

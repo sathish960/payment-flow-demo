@@ -1,7 +1,7 @@
 require("dotenv").config();
 const axios = require("axios");
 const db = require("./db");
-//this is new change 
+
 async function processPayments() {
   try {
     console.log("Starting payment processing...");

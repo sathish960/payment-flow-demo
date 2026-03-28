@@ -7,6 +7,8 @@ app.post("/pay", (req, res) => {
   const { invoiceId, amount } = req.body;
 
   console.log("Received payment request:", req.body);
+    
+  console.log("invoiceid received:",invoiceId);
 
   if (!invoiceId || !amount) {
     return res.status(400).json({
@@ -25,9 +27,10 @@ app.post("/pay", (req, res) => {
     });
   }
 
+
   return res.json({
-    status: "FAILED",
-    message: "Temporary gateway issue"
+    status: "RETRY_PENDING",
+    message: "Temporary_retry_test"
   });
 });
 

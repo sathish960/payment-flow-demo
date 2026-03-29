@@ -20,19 +20,20 @@ app.post("/pay", (req, res) => {
   // Example logic:
   // odd invoiceId => success
   // even invoiceId => fail
-  if (invoiceId % 2 === 1) {
+  //if (invoiceId % 2 === 1) {
     return res.json({
       status: "SUCCESS",
       txnReference: `TXN-${invoiceId}-${Date.now()}`
     });
-  }
+   });
+  
 
-
+/*
   return res.json({
     status: "RETRY_PENDING",
     message: "Temporary_retry_test"
   });
-});
+});*/
 
 app.listen(3000, () => {
   console.log("Fake payment API running on http://localhost:3000");

@@ -6,6 +6,20 @@ async function initDb() {
       DROP TABLE IF EXISTS payment_transaction;
       DROP TABLE IF EXISTS payment_charge_job;
       DROP TABLE IF EXISTS invoice;
+      DROP TABLE IF EXISTS payment_audit_log;
+       
+      create table payment_audit_log (
+audit_id serial primary key,
+invoice_id int,
+charge_job_id int,
+request_payload jsonb,
+response_payload jsonb,
+status varchar(30),
+error_message text,
+created_at timestamp default current_timestamp
+);
+
+
 
       CREATE TABLE invoice (
         invoice_id SERIAL PRIMARY KEY,
@@ -27,6 +41,8 @@ async function initDb() {
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
+
+      alter table payment_charge_job add column processing_flag boolean default FALSE;
 
       CREATE TABLE payment_transaction (
         payment_txn_id SERIAL PRIMARY KEY,

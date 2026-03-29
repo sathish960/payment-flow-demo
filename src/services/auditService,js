@@ -1,0 +1,30 @@
+async function insertAudit(client, {
+  invoiceId,
+  chargeJobId,
+  eventId,
+  eventType,
+  requestPayload,
+  responsePayload,
+  finalStatus,
+  errorCode,
+  errorMessage
+}) {
+  await client.query(
+    `INSERT INTO payment_audit_log
+     (invoice_id, charge_job_id, event_id, event_type, request_payload, response_payload, final_status, error_code, error_message)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+    [
+      invoiceId,
+      chargeJobId,
+      eventId,
+      eventType,
+      requestPayload,
+      responsePayload,
+      finalStatus,
+      errorCode || null,
+      errorMessage || null
+    ]
+  );
+}
+
+module.exports = { insertAudit };
